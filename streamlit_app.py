@@ -5,7 +5,7 @@ import streamlit as st
 from PIL import Image
 
 # Loading the saved model
-loaded_model = pickle.load(open('final_model (1).sav', 'rb'))
+loaded_model = pickle.load(open('final_model (2).sav', 'rb'))
 
 # Creating a function for Prediction
 @st.cache_data

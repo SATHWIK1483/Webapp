@@ -1,7 +1,6 @@
-numpy>=1.22  # Avoids distutils issue
+numpy>=1.22
 pandas
 scikit-learn
-lightgbm>=3.0.0  # Update to a compatible version
+lightgbm>=3.0.0
 streamlit>=1.12.2
 matplotlib
-pickle5

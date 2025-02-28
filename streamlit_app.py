@@ -1,6 +1,5 @@
 import numpy as np
 import pickle
-import time
 import streamlit as st
 from PIL import Image
 
@@ -48,10 +47,18 @@ def main():
         final_output = output * 100
         st.subheader(f'Probability Score of Financial Transaction is {final_output}%')
 
+        # Keeping result logic the same but modifying fraud/legitimate messages based on ProductCD
         if final_output > 75.0:
-            st.error("**OMG! Financial Transaction is Fraud**")
+            if ProductCD % 2 == 0:
+                st.error("**🚨 ALERT! High-risk Fraud Detected 🚨**")
+            else:
+                st.error("**OMG! Financial Transaction is Fraud**")
         else:
-            st.success("**Hurray! Transaction is Legitimate**")
+            if ProductCD % 2 == 0:
+                st.success("**✅ Safe Transaction: No Fraud Detected ✅**")
+            else:
+                st.success("**Hurray! Transaction is Legitimate**")
 
 if __name__ == '__main__':
     main()
+

@@ -1,64 +1,79 @@
 import numpy as np
 import pickle
 import streamlit as st
+import shap
+import lime
+import lime.lime_tabular
+import pandas as pd
 from PIL import Image
 
-# Loading the saved model
-loaded_model = pickle.load(open('final_model (2).sav', 'rb'))
+# Load trained fraud detection model
+loaded_model = pickle.load(open("final_model(2).sav", "rb"))
 
-# Creating a function for Prediction
+# Function for Fraud Prediction
 @st.cache_data
-def predict_fraud(card1, card2, card4, card6, addr1, addr2, TransactionAmt, P_emaildomain, ProductCD, DeviceType):
-    input_data = np.array([[card1, card2, card4, card6, addr1, addr2, TransactionAmt, P_emaildomain, ProductCD, DeviceType]])
-    prediction = loaded_model.predict_proba(input_data)
-    pred = '{0:.{1}f}'.format(prediction[0][0], 2)
-    return float(pred)
+def predict_fraud(features):
+    prediction = loaded_model.predict_proba(features)
+    return prediction[0][1] * 100  # Probability of fraud
 
 def main():
-    html_temp = """
-        <div style="background-color:#000000 ;padding:10px">
-        <h1 style="color:white;text-align:center;">Financial Transaction Fraud Prediction ML Web App 💰 </h1>
-        </div>
-    """
-    st.markdown(html_temp, unsafe_allow_html=True)
-
+    st.title("Financial Transaction Fraud Prediction System 💳")
+    
     # Load and display the banner image
     image = Image.open('home_banner.PNG')
-    st.image(image, caption='Impacting the World of Finance and Banking with Artificial Intelligence (AI)')
-
-    # Sidebar Inputs
-    st.sidebar.title("Financial Transaction Fraud Prediction System 🕵️")
-    st.sidebar.subheader("Choose the Below Parameters to Predict a Financial Transaction")
-
-    TransactionAmt = st.sidebar.number_input("Transaction Amount in USD", 0, 20000, step=1)
-    card1 = st.sidebar.number_input("Payment Card 1 Amount (USD)", 0, 20000, step=1)
-    card2 = st.sidebar.number_input("Payment Card 2 Amount (USD)", 0, 20000, step=1)
-    card4 = st.sidebar.radio("Payment Card Category", [1, 2, 3, 4])
-    card6 = st.sidebar.radio("Payment Card Type", [1, 2])
-    addr1 = st.sidebar.slider("Billing Zip Code", 0, 500, step=1)
-    addr2 = st.sidebar.slider("Billing Country Code", 0, 100, step=1)
-    P_emaildomain = st.sidebar.selectbox("Purchaser Email Domain", [0, 1, 2, 3, 4])
-    ProductCD = st.sidebar.selectbox("Product Code", [0, 1, 2, 3, 4])
-    DeviceType = st.sidebar.radio("Device Type", [1, 2])
-
-    # Display Result
-    if st.button("Click Here To Predict"):
-        output = predict_fraud(card1, card2, card4, card6, addr1, addr2, TransactionAmt, P_emaildomain, ProductCD, DeviceType)
-        final_output = output * 100
-        st.subheader(f'Probability Score of Financial Transaction is {final_output}%')
-
-        # Keeping result logic the same but modifying fraud/legitimate messages based on ProductCD
-        if final_output > 75.0:
-            if ProductCD % 2 == 0:
-                st.error("**🚨 ALERT! High-risk Fraud Detected 🚨**")
-            else:
-                st.error("**OMG! Financial Transaction is Fraud**")
+    st.image(image, caption='Impacting the World of Finance and Banking with AI')
+    
+    st.sidebar.title("Enter Transaction Details")
+    
+    # User Inputs
+    TransactionAmt = st.sidebar.number_input("Transaction Amount (USD)", min_value=0.0, step=0.01)
+    ProductCD = st.sidebar.selectbox("Product Code", ["A", "B", "C", "D", "E"])
+    card1 = st.sidebar.number_input("Card ID (Hidden for security)", min_value=1000, max_value=999999, step=1)
+    card2 = st.sidebar.number_input("Card 2 ID", min_value=100, max_value=9999, step=1)
+    card4 = st.sidebar.radio("Payment Card Category", ["Visa", "Mastercard", "American Express", "Discover"])
+    card6 = st.sidebar.radio("Payment Card Type", ["Credit", "Debit"])
+    billing_zip = st.sidebar.slider("Billing Zip Code", min_value=0, max_value=9999)
+    billing_country = st.sidebar.slider("Billing Country Code", min_value=0, max_value=100)
+    p_emaildomain = st.sidebar.selectbox("Purchaser Email Domain", ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"])
+    device_type = st.sidebar.radio("Device Type", ["Mobile", "Desktop"])
+    
+    # Convert Categorical Inputs to Model-Compatible Values
+    card4_map = {"Visa": 1, "Mastercard": 2, "American Express": 3, "Discover": 4}
+    card6_map = {"Credit": 1, "Debit": 2}
+    device_map = {"Mobile": 1, "Desktop": 2}
+    p_email_map = {"gmail.com": 1, "yahoo.com": 2, "hotmail.com": 3, "outlook.com": 4}
+    product_map = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5}
+    
+    # Create Feature Vector
+    features = np.array([[
+        TransactionAmt, card1, card2, card4_map[card4], card6_map[card6],
+        billing_zip, billing_country, p_email_map[p_emaildomain], product_map[ProductCD], device_map[device_type]
+    ]])
+    
+    # Make Prediction
+    if st.button("Predict Fraudulent Transaction"):
+        fraud_probability = predict_fraud(features)
+        st.subheader(f'Probability of Fraud: {fraud_probability:.2f}%')
+        
+        if fraud_probability > 75.0:
+            st.error("🚨 ALERT! High-risk Fraud Detected 🚨")
         else:
-            if ProductCD % 2 == 0:
-                st.success("**✅ Safe Transaction: No Fraud Detected ✅**")
-            else:
-                st.success("**Hurray! Transaction is Legitimate**")
+            st.success("✅ Safe Transaction: No Fraud Detected ✅")
 
-if __name__ == '__main__':
+        # Explainability using SHAP
+        explainer = shap.TreeExplainer(loaded_model)
+        shap_values = explainer.shap_values(pd.DataFrame(features, columns=["TransactionAmt", "card1", "card2", "card4", "card6", "addr1", "addr2", "P_emaildomain", "ProductCD", "DeviceType"]))
+        st.subheader("Feature Contribution (SHAP)")
+        shap.summary_plot(shap_values, pd.DataFrame(features, columns=["TransactionAmt", "card1", "card2", "card4", "card6", "addr1", "addr2", "P_emaildomain", "ProductCD", "DeviceType"]))
+
+        # Explainability using LIME
+        lime_explainer = lime.lime_tabular.LimeTabularExplainer(
+            training_data=np.random.rand(100, 10), mode="classification"
+        )
+        exp = lime_explainer.explain_instance(features[0], loaded_model.predict_proba)
+        st.subheader("Feature Importance (LIME)")
+        st.write(exp.as_list())
+
+if _name_ == "_main_":
     main()
 

@@ -33,8 +33,8 @@ card1 = st.sidebar.number_input("Choose the Payment Card 1 Amount (USD)", 0, 200
 card2 = st.sidebar.number_input("Choose the Payment Card 2 Amount (USD)", 0, 20000, step=1)
 card4 = st.sidebar.radio("Choose the Payment Card Category", [1, 2, 3, 4])
 card6 = st.sidebar.radio("Choose the Payment Card Type", [1, 2])
-addr1 = st.sidebar.slider("Choose the Payment Billing Zip Code", 0, 500, step=1)
-addr2 = st.sidebar.slider("Choose the Payment Billing Country Code", 0, 100, step=1)
+addr1 = st.sidebar.slider("Choose the Address 1", 0, 500, step=1)
+addr2 = st.sidebar.slider("Choose the Address 2", 0, 100, step=1)
 P_emaildomain = st.sidebar.selectbox("Choose the Purchaser Email Domain", [0, 1, 2, 3, 4])
 ProductCD = st.sidebar.selectbox("Choose the Product Code", [0, 1, 2, 3, 4])
 DeviceType = st.sidebar.radio("Choose the Payment Device Type", [1, 2])
@@ -53,18 +53,31 @@ danger_html = """
     <img src="https://media.giphy.com/media/8ymvg6pl1Lzy0/giphy.gif" alt="cancel" style="width:698px;height:350px;">
 """
 
+# Store last transaction input
+if "last_input_hash" not in st.session_state:
+    st.session_state.last_input_hash = None
+
 # Predict Button
 if st.button("Click Here To Predict"):
-    final_output = predict_fraud(card1, card2, card4, card6, addr1, addr2, TransactionAmt, P_emaildomain, ProductCD, DeviceType)
-    st.subheader(f'Probability Score of Financial Transaction is {final_output:.2f}%')
+    # Create a hash of the current input
+    current_input = (card1, card2, card4, card6, addr1, addr2, TransactionAmt, P_emaildomain, ProductCD, DeviceType)
+    current_input_hash = hash(current_input)
 
-    if final_output > 75.0:
-        st.markdown(danger_html, unsafe_allow_html=True)
-        st.error("**OMG! Financial Transaction is Fraud**")
+    if current_input_hash == st.session_state.last_input_hash:
+        st.warning("⚠️ Try with a new transaction! The same input cannot be predicted again.")
     else:
-        st.balloons()
-        st.markdown(safe_html, unsafe_allow_html=True)
-        st.success("**Hurray! Transaction is Legitimate**")
+        final_output = predict_fraud(card1, card2, card4, card6, addr1, addr2, TransactionAmt, P_emaildomain, ProductCD, DeviceType)
+        st.session_state.last_input_hash = current_input_hash  # Store hash of latest transaction
+
+        st.subheader(f'Probability Score of Financial Transaction is {final_output:.2f}%')
+
+        if final_output > 75.0:
+            st.markdown(danger_html, unsafe_allow_html=True)
+            st.error("🚨 OMG! Financial Transaction is Fraud")
+        else:
+            st.balloons()
+            st.markdown(safe_html, unsafe_allow_html=True)
+            st.success("✅ Hurray! Transaction is Legitimate")
 
 # Define the main function
 def main():

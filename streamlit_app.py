@@ -103,5 +103,5 @@ if st.button("Click Here To Predict"):
         st.success("**Hurray! Transaction is Legitimate**")
 
 # Run the App
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

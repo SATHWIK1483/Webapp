@@ -5,7 +5,7 @@ import streamlit as st
 from PIL import Image
 
 # Load the saved model (update the filename as needed)
-loaded_model = pickle.load(open('final_model (1).sav', 'rb'))  # Change if using 'final_model (2).sav'
+loaded_model = pickle.load(open('final_model (2).sav', 'rb'))  # Change if using 'final_model (2).sav'
 
 # Streamlit app title and banner
 html_temp = """
